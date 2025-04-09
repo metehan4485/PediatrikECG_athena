@@ -1,6 +1,6 @@
 import streamlit as st
 from PIL import Image
-from ekg_analysis import analyze_ekg  # Bu fonksiyonu ayrı dosyada yazacağız
+from ekg_segment_analysis import analyze_ekg  # Bu fonksiyonu ayrı dosyada yazacağız
 
 st.set_page_config(page_title="PediatrikECG_athena", layout="centered")
 
