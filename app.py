@@ -1,6 +1,6 @@
 import streamlit as st
 from PIL import Image
-from ekg_segment_analysis import analyze_ekg  # Bu fonksiyonu ayrı dosyada yazacağız
+from ekg_segment_analysis import analyze_ekg  # Segmentasyon dosyasından analiz fonksiyonu
 
 st.set_page_config(page_title="PediatrikECG_athena", layout="centered")
 
@@ -14,13 +14,11 @@ uploaded_file = st.file_uploader("Lütfen bir EKG görseli yükleyin (PNG veya J
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    st.image(image, caption="Yüklenen EKG", use_container_width=True)
+    st.image(image, caption="Yüklenilen EKG", use_container_width=True)
 
     st.markdown("⏳ Analiz ediliyor...")
 
-    # EKG analizi (analiz fonksiyonu ayrı dosyada olacak)
     result_image, yorum = analyze_ekg(image)
 
-    # Sonuçları göster
     st.image(result_image, caption="📊 Analiz Sonucu", use_container_width=True)
     st.success("🩺 Yorum: " + yorum)
