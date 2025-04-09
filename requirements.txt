@@ -1,7 +1,7 @@
-neurokit2
-wfdb
-py-ecg-detectors
-scipy
-numpy
-Pillow
 streamlit
+pillow
+numpy
+scipy
+neurokit2
+py-ecg-detectors
+wfdb
