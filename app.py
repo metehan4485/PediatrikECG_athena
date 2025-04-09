@@ -14,7 +14,7 @@ uploaded_file = st.file_uploader("Lütfen bir EKG görseli yükleyin (PNG veya J
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    st.image(image, caption="Yüklenen EKG", use_column_width=True)
+    st.image(image, caption="Yüklenen EKG", use_container_width=True)
 
     st.markdown("⏳ Analiz ediliyor...")
 
@@ -22,5 +22,5 @@ if uploaded_file is not None:
     result_image, yorum = analyze_ekg(image)
 
     # Sonuçları göster
-    st.image(result_image, caption="📊 Analiz Sonucu", use_column_width=True)
+    st.image(result_image, caption="📊 Analiz Sonucu", use_container_width=True)
     st.success("🩺 Yorum: " + yorum)
