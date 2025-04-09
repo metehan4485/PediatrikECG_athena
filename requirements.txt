@@ -1,5 +1,7 @@
-streamlit
-Pillow
-opencv-python
-numpy
+neurokit2
+wfdb
+py-ecg-detectors
 scipy
+numpy
+Pillow
+streamlit
