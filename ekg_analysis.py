@@ -1,4 +1,4 @@
-# ✅ v0.6 - Segmentasyon tabanlı EKG analizi (QRS ayrımlı)
+# ✅ v0.7 - Otomatik P, QRS ve T Segment Tanımlayıcı
 from PIL import Image, ImageDraw
 import numpy as np
 from scipy.signal import find_peaks, medfilt
@@ -7,40 +7,54 @@ def analyze_ekg(pil_image):
     gray = pil_image.convert("L")
     img = np.array(gray)
 
-    # Alt DII şeridi al (son 1/6)
+    # Alt DII şeridini al
     height = img.shape[0]
     strip = img[int(height * 5 / 6):, :]
-    strip_height = strip.shape[0]
-
-    # Kalibrasyon bölgesini maskeden çıkar (ilk 150 piksel)
     signal_band = strip[5:15, :]
     raw_signal = 255 - np.mean(signal_band, axis=0)
     mask = np.ones_like(raw_signal, dtype=bool)
-    mask[:150] = False
+    mask[:150] = False  # Kalibrasyon bölgesini dışla
 
-    # İlk sinyal düzleme ve filtreleme
-    smoothed = medfilt(raw_signal * mask, kernel_size=7)
+    signal = medfilt(raw_signal * mask, kernel_size=7)
 
-    # QRS komplekslerini bul: R piki için yeterli sivrilik aranır
-    r_peaks, r_prop = find_peaks(smoothed, distance=40, prominence=20)
+    # R-piklerini bul
+    r_peaks, _ = find_peaks(signal, distance=40, prominence=20, height=np.mean(signal) + 2*np.std(signal))
 
-    # Kalibrasyon değeri (25 mm/s hız, 1 mm = 0.04 s; 5 px = 1 mm kabul)
+    # Q, T segmentlerini ara
+    q_onsets, t_offsets = [], []
+    for r in r_peaks:
+        # Q-onset: R'den 40-10 piksel önce düşen kısım
+        q_start = r - 30
+        q_segment = signal[q_start:r] if q_start > 0 else signal[:r]
+        q = q_start + np.argmin(q_segment)
+        q_onsets.append(q)
+
+        # T dalgası: R'den 30-100 piksel sonra yüksek sinyal
+        t_window = signal[r+30:r+100] if r+100 < len(signal) else signal[r+30:]
+        if len(t_window) > 0:
+            t = r + 30 + np.argmax(t_window)
+            t_offsets.append(t)
+
+    # Hesaplamalar
     px_per_mm = 5
     time_per_px = 0.04 / px_per_mm
     rr_intervals = np.diff(r_peaks) * time_per_px
+    qt_intervals = [(t - q) * time_per_px for q, t in zip(q_onsets, t_offsets)]
     hr = int(60 / np.mean(rr_intervals)) if len(rr_intervals) > 1 else 0
+    avg_qt = round(np.mean(qt_intervals) * 1000, 1) if qt_intervals else 0
+    qtc = round(avg_qt / np.sqrt(np.mean(rr_intervals)), 1) if rr_intervals.any() else 0
 
-    # Segmentasyon çizimi
+    # Çizim
     draw = ImageDraw.Draw(pil_image)
     y0 = int(height * 5 / 6) + 10
+    for r, q, t in zip(r_peaks, q_onsets, t_offsets):
+        draw.ellipse((r - 3, y0 - 6, r + 3, y0 + 6), outline="red", width=2)   # R
+        draw.ellipse((q - 2, y0 - 4, q + 2, y0 + 4), outline="blue", width=1)  # Q
+        draw.ellipse((t - 2, y0 - 4, t + 2, y0 + 4), outline="green", width=1) # T
 
-    for idx, r in enumerate(r_peaks):
-        draw.ellipse((r - 3, y0 - 6, r + 3, y0 + 6), outline="red", width=2)
-        if idx < len(rr_intervals):
-            draw.text((r + 5, y0 - 15), f"{round(rr_intervals[idx],2)}s", fill="gray")
+    draw.text((10, 10), f"HR: {hr} bpm", fill="blue")
+    draw.text((10, 30), f"QT: {avg_qt} ms", fill="orange")
+    draw.text((10, 50), f"QTc: {qtc} ms", fill="purple")
 
-    draw.text((10, 10), f"Kalp hızı: {hr} bpm", fill="blue")
-    draw.text((10, 30), f"RR: {round(np.mean(rr_intervals), 2)} s", fill="green")
-
-    yorum = f"{len(r_peaks)} QRS kompleksi tespit edildi. Ortalama HR: {hr} bpm, RR: {round(np.mean(rr_intervals), 2)} s"
+    yorum = f"{len(r_peaks)} QRS kompleksi tespit edildi. HR: {hr} bpm | QT: {avg_qt} ms | QTc: {qtc} ms"
     return pil_image, yorum
