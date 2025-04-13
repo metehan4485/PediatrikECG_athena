@@ -1,40 +1,46 @@
-import cv2
+# ✅ v0.6 - Segmentasyon tabanlı EKG analizi (QRS ayrımlı)
+from PIL import Image, ImageDraw
 import numpy as np
-import neurokit2 as nk
-import matplotlib.pyplot as plt
+from scipy.signal import find_peaks, medfilt
 
-def calculate_rr_interval(r_peaks, time_scale):
-    if len(r_peaks) >= 2:
-        rr_interval = (r_peaks[1] - r_peaks[0]) * time_scale
-        return rr_interval
-    return None
+def analyze_ekg(pil_image):
+    gray = pil_image.convert("L")
+    img = np.array(gray)
 
-def calculate_qt_interval(qrs_start, t_end, time_scale):
-    if qrs_start is not None and t_end is not None:
-        qt_interval = abs(t_end - qrs_start) * time_scale
-        return qt_interval
-    return None
+    # Alt DII şeridi al (son 1/6)
+    height = img.shape[0]
+    strip = img[int(height * 5 / 6):, :]
+    strip_height = strip.shape[0]
 
-def calculate_qtc(qt_interval, rr_interval):
-    if qt_interval is not None and rr_interval is not None:
-        return qt_interval / (rr_interval ** 0.5)
-    return None
+    # Kalibrasyon bölgesini maskeden çıkar (ilk 150 piksel)
+    signal_band = strip[5:15, :]
+    raw_signal = 255 - np.mean(signal_band, axis=0)
+    mask = np.ones_like(raw_signal, dtype=bool)
+    mask[:150] = False
 
-def annotate_image(image, rr, qt, qtc):
-    annotated = image.copy()
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.7
-    color = (0, 0, 255)
-    thickness = 2
+    # İlk sinyal düzleme ve filtreleme
+    smoothed = medfilt(raw_signal * mask, kernel_size=7)
 
-    lines = [
-        f"RR Interval: {rr:.1f} ms" if rr else "RR Interval: --",
-        f"QT Interval: {qt:.1f} ms" if qt else "QT Interval: --",
-        f"QTc (Bazett): {qtc:.1f} ms" if qtc else "QTc (Bazett): --"
-    ]
+    # QRS komplekslerini bul: R piki için yeterli sivrilik aranır
+    r_peaks, r_prop = find_peaks(smoothed, distance=40, prominence=20)
 
-    for i, text in enumerate(lines):
-        y = 30 + i * 30
-        cv2.putText(annotated, text, (10, y), font, font_scale, color, thickness)
+    # Kalibrasyon değeri (25 mm/s hız, 1 mm = 0.04 s; 5 px = 1 mm kabul)
+    px_per_mm = 5
+    time_per_px = 0.04 / px_per_mm
+    rr_intervals = np.diff(r_peaks) * time_per_px
+    hr = int(60 / np.mean(rr_intervals)) if len(rr_intervals) > 1 else 0
 
-    return annotated
+    # Segmentasyon çizimi
+    draw = ImageDraw.Draw(pil_image)
+    y0 = int(height * 5 / 6) + 10
+
+    for idx, r in enumerate(r_peaks):
+        draw.ellipse((r - 3, y0 - 6, r + 3, y0 + 6), outline="red", width=2)
+        if idx < len(rr_intervals):
+            draw.text((r + 5, y0 - 15), f"{round(rr_intervals[idx],2)}s", fill="gray")
+
+    draw.text((10, 10), f"Kalp hızı: {hr} bpm", fill="blue")
+    draw.text((10, 30), f"RR: {round(np.mean(rr_intervals), 2)} s", fill="green")
+
+    yorum = f"{len(r_peaks)} QRS kompleksi tespit edildi. Ortalama HR: {hr} bpm, RR: {round(np.mean(rr_intervals), 2)} s"
+    return pil_image, yorum
