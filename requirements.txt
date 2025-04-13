@@ -1,8 +1,39 @@
-streamlit>=1.30.0
-opencv-python-headless>=4.8.0
-numpy>=1.23
-matplotlib>=3.7
-neurokit2>=0.2.7
-pandas>=2.0
-Pillow>=10.0
-scipy>=1.11
+# 🌐 Ana Arayüz
+streamlit
+pillow
+
+# 📈 Sinyal İşleme & Matematik
+numpy
+scipy
+wfdb
+pywt         # Wavelet analizi (özellikle T-U ayrımı için)
+matplotlib
+opencv-python
+
+# 🧠 Yapay Zeka & Öğrenme
+scikit-learn
+xgboost
+tensorflow
+keras
+
+# 🧠 Gelişmiş EKG Tanımlayıcı Kütüphaneler
+neurokit2
+py-ecg-detectors
+
+# 🧠 NLP / Klinik Yorum Üretimi
+transformers
+sentence-transformers
+langchain
+
+# 📂 Veri Yapısı & EHR Entegrasyonu
+pandas
+xmltodict
+json5
+
+# 🧪 Görselleştirme & Test
+seaborn
+plotly
+
+# 📦 Destek Araçlar
+tqdm
+joblib
