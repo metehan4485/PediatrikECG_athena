@@ -4,23 +4,18 @@ from ekg_analysis import analyze_ekg
 
 st.set_page_config(page_title="PediatrikECG_athena", layout="centered")
 
-# Başlık ve selamlama
 st.title("👶 PediatrikECG_athena")
 st.markdown("Merhaba **Arven** 🌟")
 st.markdown("Bu uygulama, pediatrik EKG görsellerini analiz etmek ve öğretici yorumlar üretmek için tasarlandı.")
 
-# Görsel yükleme
-uploaded_file = st.file_uploader("Lütfen bir EKG görseli yükleyin (PNG veya JPG formatında)", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("EKG görseli yükleyin (PNG, JPG)", type=["png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Yüklenen EKG", use_container_width=True)
+    st.markdown("⏳ Otomatik analiz başlıyor...")
 
-    st.markdown("⏳ Otomatik analiz ediliyor...")
-
-    # Otomatik analiz
     result_image, yorum = analyze_ekg(image)
 
-    # Sonuçları göster
     st.image(result_image, caption="📊 Analiz Sonucu", use_container_width=True)
-    st.success("🩺 Rapor:\n\n" + yorum)
+    st.success("🩺 **Otomatik Klinik Rapor:**\n\n" + yorum)
