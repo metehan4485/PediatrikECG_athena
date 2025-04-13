@@ -1,4 +1,4 @@
-# ✅ v0.7 - Otomatik P, QRS ve T Segment Tanımlayıcı
+# ✅ v0.7 - Otomatik P, QRS ve T Segment Tanımlayıcı (dosya: ekg_analysis.py)
 from PIL import Image, ImageDraw
 import numpy as np
 from scipy.signal import find_peaks, medfilt
