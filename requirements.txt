@@ -1,39 +1,10 @@
-# 🌐 Ana Arayüz
 streamlit
 pillow
-
-# 📈 Sinyal İşleme & Matematik
 numpy
 scipy
-wfdb
-pywt         # Wavelet analizi (özellikle T-U ayrımı için)
-matplotlib
-opencv-python
-
-# 🧠 Yapay Zeka & Öğrenme
-scikit-learn
-xgboost
-tensorflow
-keras
-
-# 🧠 Gelişmiş EKG Tanımlayıcı Kütüphaneler
-neurokit2
-py-ecg-detectors
-
-# 🧠 NLP / Klinik Yorum Üretimi
-transformers
-sentence-transformers
-langchain
-
-# 📂 Veri Yapısı & EHR Entegrasyonu
 pandas
-xmltodict
-json5
-
-# 🧪 Görselleştirme & Test
+matplotlib
 seaborn
-plotly
-
-# 📦 Destek Araçlar
-tqdm
-joblib
+opencv-python-headless
+scikit-learn
+wfdb
