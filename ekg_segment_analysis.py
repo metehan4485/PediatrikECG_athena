@@ -1,44 +1,44 @@
-import neurokit2 as nk
+import cv2
 import numpy as np
-from PIL import ImageDraw
+import neurokit2 as nk
+import matplotlib.pyplot as plt
 
-def analyze_ekg(pil_image):
-    gray = pil_image.convert("L")
-    img_array = np.array(gray)
+def calculate_rr_interval(r_peaks, time_scale):
+    if len(r_peaks) >= 2:
+        rr_interval = (r_peaks[1] - r_peaks[0]) * time_scale
+        return rr_interval
+    else:
+        return None
 
-    # Alt şerit (DII): alt 1/6'
-    height = img_array.shape[0]
-    strip = img_array[int(height * 5 / 6):, :]
-    signal_band = strip[5:15, :]
-    raw_signal = 255 - np.mean(signal_band, axis=0)
+def calculate_qt_interval(qrs_start, t_end, time_scale):
+    if qrs_start is not None and t_end is not None:
+        qt_interval = abs(t_end - qrs_start) * time_scale
+        return qt_interval
+    else:
+        return None
 
-    try:
-        cleaned = nk.ecg_clean(raw_signal, sampling_rate=250)
-        signals, info = nk.ecg_process(cleaned, sampling_rate=250)
+def calculate_qtc(qt_interval, rr_interval):
+    if qt_interval is not None and rr_interval is not None:
+        return qt_interval / (rr_interval ** 0.5)
+    else:
+        return None
 
-        rpeaks = info['ECG_R_Peaks']
-        qonsets = info.get('ECG_Q_Onsets', [])
-        tonsets = info.get('ECG_T_Offsets', [])
+def annotate_image(image, rr, qt, qtc):
+    annotated = image.copy()
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.7
+    color = (0, 0, 255)
+    thickness = 2
 
-        qt_intervals = []
-        for q, t in zip(qonsets, tonsets):
-            qt = (t - q) / 250.0
-            qt_intervals.append(qt)
+    text_lines = [
+        f"RR Interval: {rr:.1f} ms" if rr else "RR Interval: --",
+        f"QT Interval: {qt:.1f} ms" if qt else "QT Interval: --",
+        f"QTc (Bazett): {qtc:.1f} ms" if qtc else "QTc (Bazett): --"
+    ]
 
-        avg_qt = round(np.mean(qt_intervals) * 1000, 1) if qt_intervals else 0
-        avg_rr = round(np.mean(np.diff(rpeaks)) / 250.0, 2) if len(rpeaks) > 1 else 0
-        qtc = round(avg_qt / np.sqrt(avg_rr), 1) if avg_rr > 0 else 0
+    y0 = 30
+    for i, line in enumerate(text_lines):
+        y = y0 + i * 30
+        cv2.putText(annotated, line, (10, y), font, font_scale, color, thickness)
 
-        draw = ImageDraw.Draw(pil_image)
-        draw.text((10, 10), f"QT: {avg_qt} ms", fill="blue")
-        draw.text((10, 30), f"QTc: {qtc} ms", fill="green")
-
-        yorum = f"QT süre: {avg_qt} ms | QTc: {qtc} ms (Bazett)"
-
-    except Exception as e:
-        yorum = f"Segmentasyon hatası: {e}"
-        draw = ImageDraw.Draw(pil_image)
-        draw.text((10, 10), "❌ Segmentasyon başarısız", fill="red")
-        print("Hata detayı: ", e)
-
-    return pil_image, yorum
+    return annotated
