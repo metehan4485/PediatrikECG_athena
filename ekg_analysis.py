@@ -1,51 +1,40 @@
-from PIL import Image, ImageDraw
+import cv2
 import numpy as np
-from scipy.signal import find_peaks, medfilt
+import neurokit2 as nk
+import matplotlib.pyplot as plt
 
-def analyze_ekg(pil_image):
-    gray = pil_image.convert("L")
-    img = np.array(gray)
+def calculate_rr_interval(r_peaks, time_scale):
+    if len(r_peaks) >= 2:
+        rr_interval = (r_peaks[1] - r_peaks[0]) * time_scale
+        return rr_interval
+    return None
 
-    # Alt uzun DII stripini al (son 1/6)
-    height = img.shape[0]
-    strip = img[int(height * 5 / 6):, :]
+def calculate_qt_interval(qrs_start, t_end, time_scale):
+    if qrs_start is not None and t_end is not None:
+        qt_interval = abs(t_end - qrs_start) * time_scale
+        return qt_interval
+    return None
 
-    # Sinyal çıkar (ortalama çizgi)
-    signal_band = strip[5:15, :]
-    raw_signal = 255 - np.mean(signal_band, axis=0)
+def calculate_qtc(qt_interval, rr_interval):
+    if qt_interval is not None and rr_interval is not None:
+        return qt_interval / (rr_interval ** 0.5)
+    return None
 
-    # Kalibrasyon maskesi: ilk 250 pikseli dışla
-    mask = np.ones_like(raw_signal, dtype=bool)
-    mask[:250] = False
-    filtered_signal = medfilt(raw_signal, kernel_size=5) * mask
+def annotate_image(image, rr, qt, qtc):
+    annotated = image.copy()
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.7
+    color = (0, 0, 255)
+    thickness = 2
 
-    # Pik tespiti ve genişlik hesabı
-    peaks, properties = find_peaks(filtered_signal, distance=40, prominence=20, width=3)
-    widths = properties["widths"]
-    prominences = properties["prominences"]
+    lines = [
+        f"RR Interval: {rr:.1f} ms" if rr else "RR Interval: --",
+        f"QT Interval: {qt:.1f} ms" if qt else "QT Interval: --",
+        f"QTc (Bazett): {qtc:.1f} ms" if qtc else "QTc (Bazett): --"
+    ]
 
-    # R / T ayrımı (sivri ve yüksek olanları seç)
-    valid_peaks = []
-    for i, p in enumerate(peaks):
-        sharpness = prominences[i] / widths[i]
-        if sharpness > 6:
-            valid_peaks.append(p)
-    valid_peaks = np.array(valid_peaks)
+    for i, text in enumerate(lines):
+        y = 30 + i * 30
+        cv2.putText(annotated, text, (10, y), font, font_scale, color, thickness)
 
-    # RR ve HR
-    px_per_mm = 5
-    time_per_px = 0.04 / px_per_mm
-    rr_intervals = np.diff(valid_peaks) * time_per_px
-    hr = int(60 / np.mean(rr_intervals)) if len(rr_intervals) > 0 else 0
-
-    # Çizim
-    draw = ImageDraw.Draw(pil_image)
-    y0 = int(height * 5 / 6) + 10
-    for x in valid_peaks:
-        draw.ellipse((x - 3, y0 - 5, x + 3, y0 + 5), outline="red", width=2)
-    draw.text((10, 10), f"Kalp hızı: {hr} bpm", fill="blue")
-    draw.text((10, 30), f"RR: {round(np.mean(rr_intervals), 2)} s", fill="green")
-
-    yorum = f"{len(valid_peaks)} QRS kompleksi tespit edildi. Ortalama HR: {hr} bpm."
-
-    return pil_image, yorum
+    return annotated
