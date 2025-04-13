@@ -2,10 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
-from ekg_analysis import (
-    calculate_rr_interval,
-    calculate_qt_interval,
-    calculate_qtc,
+from ekg_analysis import analyze_ekg
     annotate_image
 )
 
