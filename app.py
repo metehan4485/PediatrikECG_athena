@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 from ekg_analysis import analyze_ekg
 # annotate_image
-)
 
 st.set_page_config(page_title="Athena – Pediatric ECG", layout="centered")
 
