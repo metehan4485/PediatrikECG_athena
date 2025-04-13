@@ -1,4 +1,3 @@
-# ✅ v0.9 - Klinik EKG Analizi ve R-T Ayrımı Geliştirmesi
 from PIL import Image, ImageDraw
 import numpy as np
 from scipy.signal import find_peaks, medfilt
@@ -7,7 +6,6 @@ def analyze_ekg(pil_image):
     gray = pil_image.convert("L")
     img = np.array(gray)
 
-    # Alt şeridi al (son 1/6)
     height = img.shape[0]
     strip = img[int(height * 5 / 6):, :]
     signal_band = strip[5:15, :]
@@ -17,7 +15,7 @@ def analyze_ekg(pil_image):
 
     signal = medfilt(raw_signal * mask, kernel_size=5)
 
-    # R-piklerini filtrele (genlik + sivrilik + QRS genişliği < 100 ms)
+    # R adayları
     candidates, props = find_peaks(signal, distance=40, prominence=20)
     r_peaks = []
     for r in candidates:
@@ -27,14 +25,14 @@ def analyze_ekg(pil_image):
         if len(region) < 11:
             continue
         width = np.sum(region > region.mean())
-        if width > 12:  # yaklaşık > 100 ms (g geniş QRS → elenir)
+        if width > 12:
             continue
         sharpness = signal[r] - (signal[r-5] + signal[r+5])/2
         if sharpness < 10:
             continue
         r_peaks.append(r)
 
-    # Kalp hızı → 10 sn şerit
+    time_per_px = 0.04 / 5
     heart_rate = len(r_peaks) * 6
     hr_status = "normal"
     if heart_rate > 100:
@@ -48,18 +46,21 @@ def analyze_ekg(pil_image):
     q_onsets, t_offsets = [], []
 
     for r in r_peaks:
+        # Q başlangıcı
         q_start = r - 30
         q = q_start + np.argmin(signal[q_start:r]) if q_start > 0 else r
         q_onsets.append(q)
 
+        # P dalgası (R'den önce)
         p_region = signal[r-80:r-40] if r-80 > 0 else signal[:r-40]
         p = r - 80 + np.argmax(p_region) if len(p_region) > 0 else r - 60
 
-        t_search = signal[r+20:r+100] if r+100 < len(signal) else signal[r+20:]
-        t = r + 20 + np.argmax(t_search) if len(t_search) > 0 else r + 60
+        # T dalgası (R'den sonra + J noktasına dikkat!)
+        j_point = r + 10
+        t_region = signal[j_point+10:j_point+60] if j_point+60 < len(signal) else signal[j_point+10:]
+        t = j_point + 10 + np.argmax(t_region) if len(t_region) > 0 else r + 50
         t_offsets.append(t)
 
-        time_per_px = 0.04 / 5
         pr = (r - p) * time_per_px
         qrs = (r - q) * time_per_px * 2
         qt = (t - q) * time_per_px
@@ -68,8 +69,7 @@ def analyze_ekg(pil_image):
         qrs_durations.append(qrs)
         qt_intervals.append(qt)
 
-    time_per_px = 0.04 / 5
-    rr_interval = np.mean(np.diff(r_peaks)) * time_per_px if len(r_peaks) > 1 else 0.6
+    rr_interval = np.mean(np.diff(r_peaks)) * time_per_px
     qt_mean = np.mean(qt_intervals)
     qtc = qt_mean / np.sqrt(rr_interval) if rr_interval else 0
 
