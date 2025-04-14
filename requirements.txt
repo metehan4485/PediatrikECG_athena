@@ -2,9 +2,6 @@ streamlit
 pillow
 numpy
 scipy
-pandas
-matplotlib
-seaborn
 opencv-python-headless
-scikit-learn
+pandas
 wfdb
