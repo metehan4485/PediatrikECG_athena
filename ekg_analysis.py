@@ -65,17 +65,17 @@ def analyze_ekg(pil_image):
         qrs_list.append(qrs_dur)
         qt_list.append(qt)
 
-        # İşaretle
-        draw.ellipse((r - 2, y0 - 5, r + 2, y0 + 5), outline="red", width=2)     # R
-        draw.ellipse((p - 2, y0 - 4, p + 2, y0 + 4), outline="orange", width=1)  # P
-        draw.ellipse((q - 2, y0 - 4, q + 2, y0 + 4), outline="blue", width=1)    # Q
-        draw.ellipse((t - 2, y0 - 4, t + 2, y0 + 4), outline="green", width=1)   # T
+        # Harf etiketli işaretleme
+        draw.text((p, y0 - 20), "P", fill="orange")
+        draw.text((q, y0 - 20), "Q", fill="blue")
+        draw.text((r, y0 - 20), "R", fill="red")
+        draw.text((s, y0 - 20), "S", fill="cyan")
+        draw.text((t, y0 - 20), "T", fill="green")
 
     rr = np.mean(np.diff(r_peaks)) * time_per_px
     hr = round(60 / rr) if rr > 0 else 0
     qtc = np.mean(qt_list) / np.sqrt(rr) if rr > 0 else 0
 
-    # Kalp hızı yorumu
     if hr > 100:
         status = "Taşikardi"
     elif hr < 60:
@@ -83,7 +83,6 @@ def analyze_ekg(pil_image):
     else:
         status = "Normal"
 
-    # QTc yorumu
     qtc_flag = " (Uzun QT)" if qtc*1000 > 450 else ""
 
     yorum = (
